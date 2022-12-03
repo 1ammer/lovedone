@@ -19,7 +19,10 @@ class Controller extends BaseController
     public function user(Request $request)
     {
 
-        dd($request->user());
+        return response()->json([
+            'success' => true,
+            'user'=>  $request->user()
+        ]);
     }
     /**
      * Social Login
@@ -50,15 +53,17 @@ class Controller extends BaseController
         // if there is no record with these data, create a new user
         if($user == null){
             $user = User::create([
-                'email' => $provider->email,
-                'image' => $provider->avatar,
-                'name' => $provider->name,
+                'email' => $providerUser ->email?:'',
+                'image' => $providerUser ->avatar,
+                'name' => $providerUser ->name,
                 'provider_name' => $provider,
                 'provider_id' => $providerUser->id,
             ]);
         }
         // create a token for the user, so they can login
-        $token = $user->createToken(env('APP_NAME'))->accessToken;
+        $user->tokens()->delete();
+        $token = $user->createToken('MyApp')->plainTextToken;
+
         // return the token for usage
         return response()->json([
             'success' => true,
@@ -92,15 +97,16 @@ class Controller extends BaseController
         // if there is no record with these data, create a new user
         if($user == null){
             $user = User::create([
-                'email' => $provider->email,
-                'image' => $provider->avatar,
-                'name' => $provider->name,
+                'email' => $providerUser->email,
+                'image' => $providerUser->avatar,
+                'name' => $providerUser->name,
                 'provider_name' => $provider,
                 'provider_id' => $providerUser->id,
             ]);
         }
         // create a token for the user, so they can login
-        $token = $user->createToken(env('APP_NAME'))->accessToken;
+        $user->tokens()->delete();
+        $token = $user->createToken('MyApp')->plainTextToken;
         // return the token for usage
         return response()->json([
             'success' => true,

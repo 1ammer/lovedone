@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Validator;
 use Illuminate\Routing\Controller as BaseController;
-
+use App\Rules\MatchOldPassword;
+use DB;
 class RegisterController extends BaseController
 {
     /**
@@ -31,8 +33,10 @@ class RegisterController extends BaseController
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
+        $user = User::find( $user->id);
+        $user->tokens()->delete();
         $success['token'] =  $user->createToken('MyApp')->plainTextToken;
-        $success['name'] =  $user->name;
+        $success['user'] =  $user;
 
         return $this->sendResponse($success, 'User register successfully.');
     }
@@ -46,14 +50,46 @@ class RegisterController extends BaseController
     {
         if(Auth::attempt(['email' => $request->email, 'password' => $request->password])){
             $user = Auth::user();
+            $user->tokens()->delete();
             $success['token'] =  $user->createToken('MyApp')->plainTextToken;
-            $success['name'] =  $user->name;
+            $success['user'] =  $user;
 
             return $this->sendResponse($success, 'User login successfully.');
         }
         else{
             return $this->sendError('Unauthorised.', ['error'=>'Unauthorised']);
         }
+    }
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => ['required' ],
+            'new_password' => ['required'],
+            'match_password' => ['required','same:new_password'],
+        ]);
+
+         if(!Hash::check($request->current_password,$request->user()->password)){
+             return $this->sendError('error.', ['error'=>'The Old password not match']);
+            }
+
+
+        DB::beginTransaction();
+
+        try{
+
+           $user= User::find($request->user()->id);
+            $user->update(['password'=> \Hash::make($request->new_password)]);
+            $user->save();
+            DB::commit();
+            return $this->sendResponse('', 'Password Updated successfully.');
+        }catch(\Exception $e){
+            DB::rollBack();
+            return $this->sendError('error.', ['error'=>'There is something went wrong, please try again.']);
+        }
+
+    }
+    public function forgotPassword(Request $request){
+
     }
     public function sendResponse($result, $message)
     {
