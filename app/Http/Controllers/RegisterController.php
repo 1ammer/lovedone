@@ -19,7 +19,7 @@ class RegisterController extends BaseController
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'email' => 'required|email',
+            'email' => 'required|email|unique:users',
             'password' => 'required',
             'c_password' => 'required|same:password',
         ]);
@@ -54,5 +54,31 @@ class RegisterController extends BaseController
         else{
             return $this->sendError('Unauthorised.', ['error'=>'Unauthorised']);
         }
+    }
+    public function sendResponse($result, $message)
+    {
+        $response = [
+            'success' => true,
+            'data'    => $result,
+            'message' => $message,
+        ];
+
+
+        return response()->json($response, 200);
+    }
+    public function sendError($error, $errorMessages = [], $code = 404)
+    {
+        $response = [
+            'success' => false,
+            'message' => $error,
+        ];
+
+
+        if(!empty($errorMessages)){
+            $response['data'] = $errorMessages;
+        }
+
+
+        return response()->json($response, $code);
     }
 }
